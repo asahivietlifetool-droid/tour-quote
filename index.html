@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Tour Quote - Test</title>
+
+  <!-- Favicon/icon tab: đổi URL logo của bạn ở đây -->
+  <link rel="icon" href="https://asahijapantours.com/wp-content/uploads/2023/08/cropped-favicon-32x32.png">
+
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#f6f7fb;color:#222}
+    .wrap{max-width:920px;margin:auto;padding:24px}
+    .card{background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.07);padding:24px}
+    .brand{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    .brand img{width:40px;height:40px;border-radius:8px;object-fit:cover}
+    h1{font-size:22px;margin:0}
+    .row{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
+    label{font-size:13px;color:#555}
+    input{padding:10px 12px;border:1px solid #d7dbe3;border-radius:8px;min-width:140px;background:#fffef4}
+    .result{margin-top:16px;font-weight:700;font-size:18px}
+    .note{color:#666;font-size:13px;margin-top:24px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="brand">
+        <!-- Đổi src sang logo công ty bạn nếu muốn -->
+        <img src="https://asahijapantours.com/wp-content/uploads/2023/08/cropped-favicon-192x192.png" alt="Logo">
+        <h1>Trang test GitHub Pages (có JS hoạt động)</h1>
+      </div>
+
+      <p>Nhập thử để kiểm tra script có chạy (nếu con số thay đổi tức là trang hoạt động thực sự, KHÔNG phải ảnh tĩnh):</p>
+      <div class="row">
+        <div>
+          <label>Số khách</label><br>
+          <input type="number" id="guests" value="8" min="1">
+        </div>
+        <div>
+          <label>Số ngày</label><br>
+          <input type="number" id="days" value="5" min="1">
+        </div>
+        <div>
+          <label>Đơn giá / khách / ngày (JPY)</label><br>
+          <input type="number" id="unit" value="2500" min="0">
+        </div>
+      </div>
+
+      <div class="result">Tổng (JPY): <span id="total">0</span></div>
+
+      <p class="note">Sau khi xác nhận trang chạy OK, mình sẽ thay file này bằng mã tính giá đầy đủ.</p>
+    </div>
+  </div>
+
+  <script>
+    const guests = document.getElementById('guests');
+    const days   = document.getElementById('days');
+    const unit   = document.getElementById('unit');
+    const total  = document.getElementById('total');
+
+    function fmt(n){return new Intl.NumberFormat('vi-VN').format(Math.round(n||0));}
+    function calc(){
+      const g = +guests.value||0, d = +days.value||0, u = +unit.value||0;
+      total.textContent = fmt(g*d*u);
+    }
+    [guests,days,unit].forEach(el=>{el.addEventListener('input',calc); el.addEventListener('change',calc);});
+    calc();
+  </script>
+</body>
+</html>
