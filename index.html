@@ -1,71 +1,719 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Tour Quote - Test</title>
-
-  <!-- Favicon/icon tab: đổi URL logo của bạn ở đây -->
-  <link rel="icon" href="https://asahijapantours.com/wp-content/uploads/2023/08/cropped-favicon-32x32.png">
-
-  <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#f6f7fb;color:#222}
-    .wrap{max-width:920px;margin:auto;padding:24px}
-    .card{background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.07);padding:24px}
-    .brand{display:flex;align-items:center;gap:12px;margin-bottom:16px}
-    .brand img{width:40px;height:40px;border-radius:8px;object-fit:cover}
-    h1{font-size:22px;margin:0}
-    .row{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
-    label{font-size:13px;color:#555}
-    input{padding:10px 12px;border:1px solid #d7dbe3;border-radius:8px;min-width:140px;background:#fffef4}
-    .result{margin-top:16px;font-weight:700;font-size:18px}
-    .note{color:#666;font-size:13px;margin-top:24px}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="titleText">Công cụ Báo giá Tour (V22 - Logic Reset/Fetch)</title>
+    <style>
+        /* ===== 1. BASE STYLES & TYPOGRAPHY ===== */
+        :root {
+            --color-primary: #007bff; --color-secondary: #dc3545; --color-accent: #28a745; --color-warning: #ffc107;
+            --color-input-bg: #fffde7; --color-manual-bg: #ffe0b2; --color-bg-light: #f8f9fa; --color-bg-main: #f0f3f6;
+            --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.08); --border-radius: 8px;
+            --total-bg-vnd: #fcebe9; --total-bg-usd: #e9fce9;
+        }
+        body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; padding: 20px; background-color: var(--color-bg-main); color: #343a3f; line-height: 1.6; }
+        /* ===== 2. LAYOUT & CONTAINERS ===== */
+        .container { max-width: 1500px; margin: auto; background: white; padding: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow-soft); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 4px solid var(--color-primary); padding-bottom: 15px; }
+        .logo-info { flex-grow: 1; display: flex; align-items: center; }
+        .logo-info img { max-height: 50px; margin-right: 15px; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.2); }
+        h1 { color: var(--color-primary); text-align: center; margin-bottom: 15px; font-size: 2.5em; font-weight: 700; }
+        h2 { background-color: var(--color-bg-light); padding: 12px 20px; margin-top: 35px; margin-bottom: 15px; border-left: 5px solid var(--color-secondary); font-size: 1.4em; border-radius: var(--border-radius); font-weight: 600; color: #343a3f; }
+        .hidden-row { display: none; }
+        /* ===== 3. COMPONENTS ===== */
+        table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #e9ecef; }
+        th { background-color: #e9ecef; font-weight: 600; text-transform: uppercase; color: #555; }
+        .group-header td { background-color: #f0f8ff; font-weight: bold; color: var(--color-primary); border-top: 2px solid #ccc; border-bottom: 2px solid #ccc; }
+        .input-qty, .input-select { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box; transition: border-color 0.3s; }
+        .input-qty:focus, .input-select:focus { border-color: var(--color-primary); box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); outline: none; }
+        .input-qty { background-color: var(--color-input-bg); text-align: right; }
+        .input-select { background-color: white; text-align: left; }
+        .total-price { text-align: right; font-weight: bold; color: var(--color-secondary); font-size: 1.2em; }
+        .manual-total { background-color: var(--color-manual-bg); }
+        .controls button, .action-button, #btnReloadPrices { padding: 10px 20px; margin-left: 10px; background-color: var(--color-primary); color: white; border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.3s, transform 0.2s; font-weight: 500; }
+        .controls button:hover, .action-button:hover, #btnReloadPrices:hover { background-color: #0056b3; transform: translateY(-1px); }
+        #btnReloadPrices { background-color: #ff8c00; margin-left: 20px; }
+        #btnReloadPrices:hover { background-color: #cc7000; }
+        #btnToggleExtra { background-color: var(--color-accent); color: white; }
+        #btnToggleExtra:hover { background-color: #1e7e34; }
+        #btnSendEmail { background-color: var(--color-secondary); }
+        #btnSendEmail:hover { background-color: #bd2130; }
+        .summary-card { border: 2px solid #ced4da; border-radius: var(--border-radius); margin-top: 30px; padding: 15px 25px; background-color: var(--color-bg-light); }
+        .summary-table { width: 100%; border-spacing: 0; }
+        .summary-table td { padding: 10px 0; border-bottom: none; }
+        .total-yen-row td { font-weight: bold; font-size: 1.3em; color: var(--color-primary); }
+        #currencySelector { display: flex; align-items: center; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ced4da; }
+        #currencySelector label { font-weight: bold; white-space: nowrap; }
+        #currencySelector select { width: 100px; padding: 8px; }
+        #currencySelector input { flex-grow: 1; padding: 8px; }
+        #convertedRow { margin-top: 15px; padding: 15px 0; }
+        #convertedRow td { font-weight: 700; font-size: 1.8em; padding: 15px 0; text-align: right; border-top: 3px solid; border-bottom: 3px solid; }
+        .converted-total-vnd td { background-color: var(--total-bg-vnd); color: var(--color-secondary); border-color: var(--color-secondary); }
+        .converted-total-usd td { background-color: var(--total-bg-usd); color: var(--color-accent); border-color: var(--color-accent); }
+        #emailSection { margin-top: 30px; padding: 25px; border: 1px solid #ced4da; border-radius: var(--border-radius); background-color: var(--color-bg-light); display: flex; flex-wrap: wrap; align-items: center; gap: 15px; }
+        #emailSection input { padding: 10px; border: 1px solid var(--color-primary); border-radius: 4px; width: 300px; }
+        #emailSection button { margin-left: 0; }
+        #priceStatus { text-align: center; margin: 10px 0; font-weight: bold; padding: 8px; border-radius: 4px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .status-success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; }
+        .status-error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; }
+        /* ===== 4. RESPONSIVE ===== */
+        @media (max-width: 1000px) {
+            .container { padding: 15px; }
+            .header { flex-direction: column; align-items: flex-start; }
+            .controls { margin-top: 15px; }
+            .controls button, .action-button, #btnReloadPrices { margin-left: 0; margin-right: 10px; margin-bottom: 10px; }
+            table, .summary-table { display: block; width: 100%; border-spacing: 0; }
+            thead { display: none; }
+            tr { display: block; margin-bottom: 15px; border: 1px solid #e9ecef; border-radius: var(--border-radius); }
+            th, td { display: block; width: 100% !important; padding: 8px 15px; text-align: left; border-bottom: none; }
+            td::before { content: attr(data-label); font-weight: bold; color: var(--color-primary); display: block; margin-bottom: 5px; }
+            .summary-table td::before, .total-yen-row td::before, #convertedRow td::before { content: none; }
+            .input-qty, .input-select { width: 100%; }
+            #emailSection { flex-direction: column; align-items: stretch; }
+            #emailSection input { width: 100%; }
+        }
+    </style>
 </head>
-<body>
-  <div class="wrap">
-    <div class="card">
-      <div class="brand">
-        <!-- Đổi src sang logo công ty bạn nếu muốn -->
-        <img src="https://asahijapantours.com/wp-content/uploads/2023/08/cropped-favicon-192x192.png" alt="Logo">
-        <h1>Trang test GitHub Pages (có JS hoạt động)</h1>
-      </div>
-
-      <p>Nhập thử để kiểm tra script có chạy (nếu con số thay đổi tức là trang hoạt động thực sự, KHÔNG phải ảnh tĩnh):</p>
-      <div class="row">
-        <div>
-          <label>Số khách</label><br>
-          <input type="number" id="guests" value="8" min="1">
+<body onload="calculator.init()">
+    <div class="container">
+        <div class="header">
+            <div class="logo-info">
+                <img src="https://via.placeholder.com/50x50.png?text=A" alt="Asahi VietLife Logo" id="logoImage"> 
+                <div>
+                    <strong id="companyName" style="font-size: 1.4em; color: var(--color-primary);">Công TNHH du lịch Asahi VietLife - JapanTravel</strong><br>
+                    <span id="companyContact" style="font-size: 0.9em; color: #6c757d;">Email: Contact@AsahiVietLife.Tokyo | Tel: +84 901 xxx xxx</span>
+                </div>
+            </div>
+            <div class="controls">
+                <button onclick="calculator.setLanguage('vi')">Tiếng Việt</button>
+                <button onclick="calculator.setLanguage('en')">English</button>
+                <!-- Đổi chức năng: khôi phục giá mặc định, không fetch -->
+                <button id="btnReloadPrices" onclick="calculator.resetPrices()">🔄 Tải lại Giá</button>
+            </div>
         </div>
-        <div>
-          <label>Số ngày</label><br>
-          <input type="number" id="days" value="5" min="1">
-        </div>
-        <div>
-          <label>Đơn giá / khách / ngày (JPY)</label><br>
-          <input type="number" id="unit" value="2500" min="0">
-        </div>
-      </div>
 
-      <div class="result">Tổng (JPY): <span id="total">0</span></div>
+        <h1 id="mainTitle">CÔNG CỤ TÍNH NHANH GIÁ TOUR NHẬT BẢN</h1>
+        <p style="text-align: center; color: #555; font-size: 1.1em;" id="sloganText">Giá được tải trực tiếp từ dữ liệu nội bộ AsahiVietLife và các đối tác đầu dịch vụ Nhật Bản. Đại lý chỉ cần nhập số liệu vào ô màu vàng.</p>
+        
+        <!-- Mặc định dùng trạng thái dùng giá nội bộ (không fetch) -->
+        <div id="priceStatus" class="status-success">
+            <span id="priceStatusMessage">Đang sử dụng giá mặc định.</span>
+        </div>
 
-      <p class="note">Sau khi xác nhận trang chạy OK, mình sẽ thay file này bằng mã tính giá đầy đủ.</p>
+        <h2 id="section1Title">I. Thông Tin Chung</h2>
+        <table class="info-table">
+            <tr>
+                <td style="width: 20%; font-weight: bold; color: #343a3f;" id="labelNumPeople">Số lượng Khách:</td>
+                <td style="width: 30%;"><input type="number" id="numPeople" value="8" min="1" data-field="numPeople" class="input-qty" style="width: 150px;"></td>
+                <td style="width: 20%; font-weight: bold; color: #343a3f;" id="labelTourType">Chế độ Tour:</td>
+                <td style="width: 30%;">
+                    <select id="tourType" data-field="tourType" class="input-select">
+                        <option value="private" id="optionPrivate">Tour Private (Nhập thủ công hoặc chọn Tour)</option>
+                        <option value="5N4D" id="option5N4D" selected>5 Ngày / 4 Đêm</option>
+                        <option value="4N3D" id="option4N3D">4 Ngày / 3 Đêm</option>
+                        <option value="6N5D" id="option6N5D">6 Ngày / 5 Đêm</option>
+                        <option value="7N6D" id="option7N6D">7 Ngày / 6 Đêm</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td style="font-weight: bold; color: #343a3f;" id="labelNumDays">Số Ngày:</td>
+                <td><input type="number" id="numDays" value="5" min="1" data-field="numDays" class="input-qty" style="width: 150px;"></td>
+                <td style="font-weight: bold; color: #343a3f;" id="labelNumNights">Số Đêm:</td>
+                <td><input type="number" id="numNights" value="4" min="1" data-field="numNights" class="input-qty" style="width: 150px;"></td>
+            </tr>
+        </table>
+        
+        <h2 id="section2Title">II. Dịch Vụ Cố Định Cơ Bản</h2>
+        <table class="services-table">
+            <thead>
+                <tr>
+                    <th style="width: 45%;" id="thService">Dịch Vụ</th>
+                    <th id="thUnit">Đơn vị tính</th>
+                    <th style="width: 15%;" id="thQty">SL Nhập</th>
+                    <th style="width: 25%; text-align: right;" id="thTotal">Thành Tiền (Yên)</th>
+                </tr>
+            </thead>
+            <tbody id="basicServices">
+                <tr class="service-row" data-service-id="ServiceFee">
+                    <td id="serviceName-ServiceFee">Dịch vụ Tour + vé vui chơi</td>
+                    <td><span id="unit-ServiceFee">Người x Ngày</span></td>
+                    <td><span id="qtyDisplay-ServiceFee">8 Người x 5 Ngày</span></td>
+                    <td><span id="total-ServiceFee" class="total-price">0</span></td>
+                </tr>
+
+                <tr class="group-header" data-group="Guide">
+                    <td id="guideGroupHeader">HƯỚNG DẪN VIÊN (Tour Guide)</td><td></td><td></td>
+                    <td>
+                        <select id="guideOption" data-option="guide" class="input-select" style="width: 100%; text-align: left;">
+                            <option value="No" id="optionGuideNo">Không dùng</option>
+                            <option value="Yes" id="optionGuideYes" selected>Có dùng</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr class="service-row" data-service-id="Guide">
+                    <td id="serviceName-Guide">Chi phí Hướng dẫn viên</td>
+                    <td><span id="unit-Guide">Ngày</span></td>
+                    <td><input type="number" id="qty-Guide" value="5" min="0" class="input-qty" disabled></td>
+                    <td><span id="total-Guide" class="total-price">0</span></td>
+                </tr>
+
+                <tr class="group-header" data-group="Hotel">
+                    <td id="hotelGroupHeader">LƯU TRÚ (Hotel)</td><td></td><td></td>
+                    <td>
+                        <select id="hotelTypeSelect" data-option="hotel" class="input-select" style="width: 100%; text-align: left;">
+                            <option value="Hotel3" selected id="optionHotel3">3 Sao</option>
+                            <option value="Hotel4" id="optionHotel4">4 Sao</option>
+                            <option value="None" id="optionHotelNone">Không dùng</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr class="service-row" data-service-id="Hotel_Calc">
+                    <td id="hotelTypeLabel">Chi phí Khách sạn (Tự động):</td>
+                    <td><span id="unit-Hotel_Calc">Đêm x Người</span></td>
+                    <td><span id="hotelNightDisplay">4 Đêm x 8 Khách</span></td>
+                    <td><span id="total-Hotel_Calc" class="total-price">0</span></td>
+                </tr>
+                
+                <tr class="group-header" data-group="Meal">
+                    <td id="mealGroupHeader">BỮA ĂN (Meal)</td><td></td><td></td><td>
+                        <select id="mealOption" data-option="meal" class="input-select" style="width: 100%; text-align: left;">
+                            <option value="No" id="optionMealNo">Không</option>
+                            <option value="Yes" id="optionMealYes" selected>Có</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr class="service-row meal-row" data-service-id="Breakfast">
+                    <td id="serviceName-Breakfast">Bữa Sáng</td>
+                    <td><span id="unit-Breakfast">Bữa x Người</span></td>
+                    <td><input type="number" id="qty-Breakfast" value="40" min="0" class="input-qty" disabled></td>
+                    <td><span id="total-Breakfast" class="total-price">0</span></td>
+                </tr>
+                <tr class="service-row meal-row" data-service-id="Lunch">
+                    <td id="serviceName-Lunch">Bữa Trưa</td>
+                    <td><span id="unit-Lunch">Bữa x Người</span></td>
+                    <td><input type="number" id="qty-Lunch" value="40" min="0" class="input-qty" disabled></td>
+                    <td><span id="total-Lunch" class="total-price">0</span></td>
+                </tr>
+                <tr class="service-row meal-row" data-service-id="Dinner">
+                    <td id="serviceName-Dinner">Bữa Tối</td>
+                    <td><span id="unit-Dinner">Bữa x Người</span></td>
+                    <td><input type="number" id="qty-Dinner" value="32" min="0" class="input-qty" disabled></td>
+                    <td><span id="total-Dinner" class="total-price">0</span></td>
+                </tr>
+                
+                <tr class="group-header" data-group="CarDay">
+                    <td id="carDayHeader">XE DI CHUYỂN THEO NGÀY (Car Day)</td><td></td><td></td><td></td>
+                </tr>
+                <tr class="service-row car-row-day hidden-row" data-service-id="Car8Day"><td><span id="serviceName-Car8Day">Xe 8 chỗ (Max 6 người)</span></td><td><span id="unit-Car8Day">Ngày</span></td><td><input type="number" id="qty-Car8Day" value="0" min="0" class="input-qty"></td><td><span id="total-Car8Day" class="total-price">0</span></td></tr>
+                <tr class="service-row car-row-day" data-service-id="Car10Day"><td><span id="serviceName-Car10Day">Xe 10 chỗ (Max 8 người)</span></td><td><span id="unit-Car10Day">Ngày</span></td><td><input type="number" id="qty-Car10Day" value="5" min="0" class="input-qty"></td><td><span id="total-Car10Day" class="total-price">0</span></td></tr>
+                <tr class="service-row car-row-day hidden-row" data-service-id="Car16Day"><td><span id="serviceName-Car16Day">Xe 16 chỗ (Max 12 người)</span></td><td><span id="unit-Car16Day">Ngày</span></td><td><input type="number" id="qty-Car16Day" value="0" min="0" class="input-qty"></td><td><span id="total-Car16Day" class="total-price">0</span></td></tr>
+                <tr class="service-row car-row-day hidden-row" data-service-id="Car29Day"><td><span id="serviceName-Car29Day">Xe 29 chỗ (Max 18 người)</span></td><td><span id="unit-Car29Day">Ngày</span></td><td><input type="number" id="qty-Car29Day" value="0" min="0" class="input-qty"></td><td><span id="total-Car29Day" class="total-price">0</span></td></tr>
+                <tr class="service-row car-row-day hidden-row" data-service-id="Car45Day"><td><span id="serviceName-Car45Day">Xe 45 chỗ (Max 35 khách)</span></td><td><span id="unit-Car45Day">Ngày</span></td><td><input type="number" id="qty-Car45Day" value="0" min="0" class="input-qty"></td><td><span id="total-Car45Day" class="total-price">0</span></td></tr>
+                
+                <tr class="group-header" data-group="CarAirport">
+                    <td id="carAirportOptionLabel">ĐÓN/TIỄN SÂN BAY (Airport Transfer)</td><td></td><td></td>
+                    <td>
+                        <select id="carAirportOption" data-option="carAirport" class="input-select" style="width: 100%; text-align: left;">
+                            <option value="No" id="optionAirportNo">Không dùng</option>
+                            <option value="Yes" id="optionAirportYes" selected>Có dùng</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr class="service-row car-row-airport" data-service-id="Car8Airport"><td><span id="serviceName-Car8Airport">Xe 8 chỗ (Max 6 người)</span></td><td><span id="unit-Car8Airport">Lượt</span></td><td><input type="number" id="qty-Car8Airport" value="0" min="0" class="input-qty"></td><td><span id="total-Car8Airport" class="total-price">0</span></td></tr>
+                <tr class="service-row car-row-airport" data-service-id="Car10Airport"><td><span id="serviceName-Car10Airport">Xe 10 chỗ (Max 8 người)</span></td><td><span id="unit-Car10Airport">Lượt</span></td><td><input type="number" id="qty-Car10Airport" value="0" min="0" class="input-qty"></td><td><span id="total-Car10Airport" class="total-price">0</span></td></tr>
+                <tr class="service-row car-row-airport hidden-row" data-service-id="Car16Airport"><td><span id="serviceName-Car16Airport">Xe 16 chỗ (Max 12 người)</span></td><td><span id="unit-Car16Airport">Lượt</span></td><td><input type="number" id="qty-Car16Airport" value="0" min="0" class="input-qty"></td><td><span id="total-Car16Airport" class="total-price">0</span></td></tr>
+                <tr class="service-row car-row-airport hidden-row" data-service-id="Car29Airport"><td><span id="serviceName-Car29Airport">Xe 29 chỗ (Max 18 người)</span></td><td><span id="unit-Car29Airport">Lượt</span></td><td><input type="number" id="qty-Car29Airport" value="0" min="0" class="input-qty"></td><td><span id="total-Car29Airport" class="total-price">0</span></td></tr>
+                <tr class="service-row car-row-airport hidden-row" data-service-id="Car45Airport"><td><span id="serviceName-Car45Airport">Xe 45 chỗ (Max 35 khách)</span></td><td><span id="unit-Car45Airport">Lượt</span></td><td><input type="number" id="qty-Car45Airport" value="0" min="0" class="input-qty"></td><td><span id="total-Car45Airport" class="total-price">0</span></td></tr>
+            </tbody>
+        </table>
+        
+        <div style="text-align: center; margin-top: 25px;">
+            <button onclick="calculator.toggleExtraServices()" id="btnToggleExtra" class="action-button">➕ Thêm Dịch vụ Tùy chọn (Optional)</button>
+        </div>
+
+        <div id="extraSection" class="hidden-row">
+            <h2 id="section3Title">III. Dịch Vụ Tùy Chọn (Extra)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 45%;" id="thExtraService">Dịch Vụ</th>
+                        <th id="thExtraUnit">Đơn vị tính</th>
+                        <th style="width: 15%;" id="thExtraQty">SL Nhập</th>
+                        <th style="width: 25%; text-align: right;" id="thExtraTotal">Thành Tiền (Yên)</th>
+                    </tr>
+                </thead>
+                <tbody id="extraServices"></tbody>
+            </table>
+        </div>
+
+        <h2 id="section4Title">IV. TỔNG KẾT BÁO GIÁ</h2>
+        <div class="summary-card">
+            <table class="summary-table">
+                <tr class="total-yen-row">
+                    <td style="width: 70%;" id="finalTotalLabel">TỔNG CỘNG CUỐI CÙNG (<span class="currency-symbol">Yên</span>):</td>
+                    <td style="width: 30%; text-align: right;"><span id="grandTotal">0</span> <span class="currency-symbol">Yên</span></td>
+                </tr>
+                <tr>
+                    <td style="width: 70%; font-weight: 500;" id="perPersonLabel">Chi Phí/Người (<span class="currency-symbol">Yên</span>):</td>
+                    <td style="width: 30%; text-align: right; font-size: 1.1em; font-weight: bold;"><span id="perPersonTotal">0</span> <span class="currency-symbol">Yên</span></td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <div id="currencySelector">
+                            <label id="exchangeRateLabel">Quy đổi Tiền tệ (Đại lý nhập Tỷ giá):</label>
+                            <select id="conversionCurrency" class="input-select">
+                                <option value="VND" id="optionVND">VND</option>
+                                <option value="USD" id="optionUSD">USD</option>
+                            </select>
+                            <input type="number" id="exchangeRate" value="165.50" min="0" step="0.01" data-field="exchangeRate" class="input-qty">
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <table style="margin-top: 15px;">
+                <tr id="convertedRow" class="converted-total-vnd">
+                    <td style="width: 70%; text-align: left;"><span id="finalConvertedLabel">TỔNG CỘNG CUỐI CÙNG (VND):</span></td>
+                    <td style="width: 30%;"><span id="finalConvertedTotal">0</span> <span id="convertedCurrencySymbol">VND</span></td>
+                </tr>
+            </table>
+        </div>
+
+        <h2 id="section5Title" style="border: none; background: none; padding-left: 0; margin-top: 30px; color: var(--color-secondary);">V. Gửi Báo Giá Email</h2>
+        <div id="emailSection">
+            <p id="emailNote" style="color: #555; margin: 0;">Nhập email người nhận và nhấn nút để **Mở ứng dụng email và Tạo bản nháp**: (Phiên bản rút gọn)</p>
+            <input type="email" id="recipientEmail" placeholder="Nhập Email Khách Hàng (ví dụ: khachhang@mail.com)">
+            <button id="btnSendEmail" onclick="calculator.generateMailtoLink()" class="action-button">✉️ Tạo Bản Nháp Email</button>
+        </div>
+        
+        <p style="margin-top: 20px; font-size: 0.9em; color: #777;" id="noteText">*Lưu ý: Các mục Vé Disneyland/Universal/Giá vé Tự nhập cần được nhập giá thủ công vào ô Thành Tiền màu cam.</p>
     </div>
-  </div>
 
-  <script>
-    const guests = document.getElementById('guests');
-    const days   = document.getElementById('days');
-    const unit   = document.getElementById('unit');
-    const total  = document.getElementById('total');
+    <script>
+        /* ===== 4. CONFIGURATION DATA ===== */
+        const DEFAULT_PRICES = {
+            Hotel3: 7500, Hotel4: 14000, Guide: 28000, Breakfast: 1200, Lunch: 2800, Dinner: 3500, ServiceFee: 2500,
+            Car8Day: 65000, Car10Day: 75000, Car16Day: 90000, Car29Day: 135000, Car45Day: 160000,
+            Car8Airport: 35000, Car10Airport: 45000, Car16Airport: 65000, Car29Airport: 80000, Car45Airport: 100000,
+            CKimono: 5000, RKimono: 7500, ZKimono: 10000, CYukata: 4000, RYukata: 5500, Hakama: 8500, Furisode: 17000,
+            Geisha: 18000, Sumo: 6000, Rickshaw: 12000, OdaibaCruise: 4000, HakoneCruise: 3000, HakoneRopeway: 2600, Skytree: 5000,
+            Wagyu: 10000, Kobe: 19000, Okonomiyaki: 3500, TeaCeremony: 4500, Onsen: 3000, Ryokan: 35000,
+            Disneyland: 0, Universal: 0
+        };
 
-    function fmt(n){return new Intl.NumberFormat('vi-VN').format(Math.round(n||0));}
-    function calc(){
-      const g = +guests.value||0, d = +days.value||0, u = +unit.value||0;
-      total.textContent = fmt(g*d*u);
-    }
-    [guests,days,unit].forEach(el=>{el.addEventListener('input',calc); el.addEventListener('change',calc);});
-    calc();
-  </script>
+        const CONFIG = {
+            /* ĐÃ BỎ: PRICE_URL / CSV_GID và mọi fetch từ Google Sheet */
+            PRICES: { ...DEFAULT_PRICES },
+            SERVICE_FEE_PERCENTAGE: 0.05,
+            CAR_CAPACITY: { 
+                Car8Day: 6, Car10Day: 8, Car16Day: 12, Car29Day: 18, Car45Day: 35,
+                Car8Airport: 6, Car10Airport: 8, Car16Airport: 12, Car29Airport: 18, Car45Airport: 35 
+            },
+            SERVICES_DATA: [
+                { id: 'ServiceFee', name_vi: 'Dịch vụ Tour + vé vui chơi', name_en: 'Tour Services + Tickets', unit_vi: 'Người x Ngày', unit_en: 'Pax x Days', isFixed: true, calculatedQty: 0, calculatedTotal: 0 }, 
+                { id: 'Guide', name_vi: 'Chi phí Hướng dẫn viên', name_en: 'Tour Guide Cost', unit_vi: 'Ngày', unit_en: 'Day', isQuantityInput: true, isFixed: true, calculatedQty: 0, calculatedTotal: 0 }, 
+                { id: 'Hotel_Calc', name_vi: 'Chi phí Khách sạn (Tự động)', name_en: 'Hotel Cost (Automatic)', unit_vi: 'Đêm x Người', unit_en: 'Nights x Guests', isFixed: true, calculatedQty: 0, calculatedTotal: 0, hotelType: 'Hotel3' }, 
+                { id: 'Breakfast', name_vi: 'Bữa Sáng', name_en: 'Breakfast', unit_vi: 'Bữa x Người', unit_en: 'Meal x Pax', isQuantityInput: true, isFixed: true, calculatedQty: 0, calculatedTotal: 0 }, 
+                { id: 'Lunch', name_vi: 'Bữa Trưa', name_en: 'Lunch', unit_vi: 'Bữa x Người', unit_en: 'Meal x Pax', isQuantityInput: true, isFixed: true, calculatedQty: 0, calculatedTotal: 0 }, 
+                { id: 'Dinner', name_vi: 'Bữa Tối', name_en: 'Dinner', unit_vi: 'Bữa x Người', unit_en: 'Meal x Pax', isQuantityInput: true, isFixed: true, calculatedQty: 0, calculatedTotal: 0 }, 
+                { id: 'Car8Day', name_vi: 'Xe 8 chỗ (Max 6 người)', name_en: '8-seater Car (Max 6 pax)', unit_vi: 'Ngày', unit_en: 'Day', isQuantityInput: true, isFixed: true, calculatedQty: 0, calculatedTotal: 0 }, 
+                { id: 'Car10Day', name_vi: 'Xe 10 chỗ (Max 8 người)', name_en: '10-seater Car (Max 8 pax)', unit_vi: 'Ngày', unit_en: 'Day', isQuantityInput: true, isFixed: true, calculatedQty: 0, calculatedTotal: 0 }, 
+                { id: 'Car16Day', name_vi: 'Xe 16 chỗ (Max 12 người)', name_en: '16-seater Car (Max 12 pax)', unit_vi: 'Ngày', unit_en: 'Day', isQuantityInput: true, isFixed: true, calculatedQty: 0, calculatedTotal: 0 }, 
+                { id: 'Car29Day', name_vi: 'Xe 29 chỗ (Max 18 người)', name_en: '29-seater Car (Max 18 pax)', unit_vi: 'Ngày', unit_en: 'Day', isQuantityInput: true, isFixed: true, calculatedQty: 0, calculatedTotal: 0 }, 
+                { id: 'Car45Day', name_vi: 'Xe 45 chỗ (Max 35 khách)', name_en: '45-seater Car (Max 35 pax)', unit_vi: 'Ngày', unit_en: 'Day', isQuantityInput: true, isFixed: true, calculatedQty: 0, calculatedTotal: 0 },
+                { id: 'Car8Airport', name_vi: 'Xe 8 chỗ (Max 6 người)', name_en: '8-seater Car (Max 6 pax)', unit_vi: 'Lượt', unit_en: 'Trip', isQuantityInput: true, isFixed: true, calculatedQty: 0, calculatedTotal: 0 }, 
+                { id: 'Car10Airport', name_vi: 'Xe 10 chỗ (Max 8 người)', name_en: '10-seater Car (Max 8 pax)', unit_vi: 'Lượt', unit_en: 'Trip', isQuantityInput: true, isFixed: true, calculatedQty: 0, calculatedTotal: 0 }, 
+                { id: 'Car16Airport', name_vi: 'Xe 16 chỗ (Max 12 người)', name_en: '16-seater Car (Max 12 pax)', unit_vi: 'Lượt', unit_en: 'Trip', isQuantityInput: true, isFixed: true, calculatedQty: 0, calculatedTotal: 0 }, 
+                { id: 'Car29Airport', name_vi: 'Xe 29 chỗ (Max 18 người)', name_en: '29-seater Car (Max 18 pax)', unit_vi: 'Lượt', unit_en: 'Trip', isQuantityInput: true, isFixed: true, calculatedQty: 0, calculatedTotal: 0 }, 
+                { id: 'Car45Airport', name_vi: 'Xe 45 chỗ (Max 35 khách)', name_en: '45-seater Car (Max 35 pax)', unit_vi: 'Lượt', unit_en: 'Trip', isQuantityInput: true, isFixed: true, calculatedQty: 0, calculatedTotal: 0 },
+                { id: 'CKimono', name_vi: 'Children’s Kimono', name_en: 'Children’s Kimono', unit_vi: 'Bộ', unit_en: 'Set', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 }, 
+                { id: 'RKimono', name_vi: 'Regular Kimono', name_en: 'Regular Kimono', unit_vi: 'Bộ', unit_en: 'Set', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 }, 
+                { id: 'ZKimono', name_vi: 'Zen Kimono', name_en: 'Zen Kimono', unit_vi: 'Bộ', unit_en: 'Set', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 }, 
+                { id: 'CYukata', name_vi: 'Children’s Yukata', name_en: 'Children’s Yukata', unit_vi: 'Bộ', unit_en: 'Set', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 }, 
+                { id: 'RYukata', name_vi: 'Yukata (Nam/Nữ)', name_en: 'Yukata (Male/Female)', unit_vi: 'Bộ', unit_en: 'Set', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 },
+                { id: 'Hakama', name_vi: 'Hakama (Nam/Nữ)', name_en: 'Hakama (Male/Female)', unit_vi: 'Bộ', unit_en: 'Set', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 },
+                { id: 'Furisode', name_vi: 'Furisode', name_en: 'Furisode', unit_vi: 'Bộ', unit_en: 'Set', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 },
+                { id: 'Geisha', name_vi: 'Biểu diễn Geisha', name_en: 'Geisha Show', unit_vi: 'Khách', unit_en: 'Pax', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 },
+                { id: 'Sumo', name_vi: 'Biểu diễn/Ăn tối Sumo', name_en: 'Sumo Show/Dinner', unit_vi: 'Khách', unit_en: 'Pax', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 },
+                { id: 'Rickshaw', name_vi: 'Xe kéo Rickshaw', name_en: 'Rickshaw Tour', unit_vi: 'Lượt', unit_en: 'Trip', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 },
+                { id: 'OdaibaCruise', name_vi: 'Du thuyền Odaiba', name_en: 'Odaiba Cruise', unit_vi: 'Khách', unit_en: 'Pax', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 },
+                { id: 'HakoneCruise', name_vi: 'Du thuyền Hồ Ashi (Hakone)', name_en: 'Lake Ashi Cruise (Hakone)', unit_vi: 'Khách', unit_en: 'Pax', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 },
+                { id: 'HakoneRopeway', name_vi: 'Cáp treo Hakone', name_en: 'Hakone Ropeway', unit_vi: 'Khách', unit_en: 'Pax', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 },
+                { id: 'Skytree', name_vi: 'Vé đài quan sát Skytree', name_en: 'Skytree Observation Deck Ticket', unit_vi: 'Khách', unit_en: 'Pax', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 },
+                { id: 'Wagyu', name_vi: 'Bữa ăn Wagyu', name_en: 'Wagyu Meal', unit_vi: 'Khách', unit_en: 'Pax', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 },
+                { id: 'Kobe', name_vi: 'Bữa ăn Kobe Beef', name_en: 'Kobe Beef Meal', unit_vi: 'Khách', unit_en: 'Pax', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 },
+                { id: 'Okonomiyaki', name_vi: 'Bữa ăn Okonomiyaki', name_en: 'Okonomiyaki Meal', unit_vi: 'Khách', unit_en: 'Pax', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 },
+                { id: 'TeaCeremony', name_vi: 'Trải nghiệm Trà đạo', name_en: 'Tea Ceremony Experience', unit_vi: 'Khách', unit_en: 'Pax', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 },
+                { id: 'Onsen', name_vi: 'Trải nghiệm Onsen', name_en: 'Onsen Experience', unit_vi: 'Khách', unit_en: 'Pax', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 },
+                { id: 'Ryokan', name_vi: 'Phòng Ryokan (1 đêm)', name_en: 'Ryokan Room (1 Night)', unit_vi: 'Phòng', unit_en: 'Room', isExtra: true, isQuantityInput: true, calculatedQty: 0, calculatedTotal: 0 },
+                { id: 'Disneyland', name_vi: 'Vé Disneyland (TỰ NHẬP)', name_en: 'Disneyland Ticket (MANUAL INPUT)', unit_vi: 'Yên', unit_en: 'JPY', isExtra: true, isManualInput: true, calculatedQty: 1, calculatedTotal: 0 },
+                { id: 'Universal', name_vi: 'Vé Universal (TỰ NHẬP)', name_en: 'Universal Ticket (MANUAL INPUT)', unit_vi: 'Yên', unit_en: 'JPY', isExtra: true, isManualInput: true, calculatedQty: 1, calculatedTotal: 0 },
+                { id: 'Manual1', name_vi: 'Chi phí TỰ NHẬP 1', name_en: 'Manual Cost 1', unit_vi: 'Yên', unit_en: 'JPY', isExtra: true, isManualInput: true, calculatedQty: 1, calculatedTotal: 0 },
+                { id: 'Manual2', name_vi: 'Chi phí TỰ NHẬP 2', name_en: 'Manual Cost 2', unit_vi: 'Yên', unit_en: 'JPY', isExtra: true, isManualInput: true, calculatedQty: 1, calculatedTotal: 0 }
+            ],
+            LANGUAGE: 'vi',
+            EXTRA_SECTION_VISIBLE: false
+        };
+
+        const TRANSLATIONS = {
+            vi: {
+                titleText: "Công cụ Báo giá Tour (V22 - Logic Reset/Fetch)",
+                mainTitle: "CÔNG CỤ TÍNH NHANH GIÁ TOUR NHẬT BẢN",
+                sloganText: "Giá được tải trực tiếp từ dữ liệu nội bộ AsahiVietLife và các đối tác đầu dịch vụ Nhật Bản. Đại lý chỉ cần nhập số liệu vào ô màu vàng.",
+                noteText: "*Lưu ý: Các mục Vé Disneyland/Universal/Giá vé Tự nhập cần được nhập giá thủ công vào ô Thành Tiền màu cam.",
+                labelNumPeople: "Số lượng Khách:", labelTourType: "Chế độ Tour:",
+                optionPrivate: "Tour Private (Nhập thủ công hoặc chọn Tour)",
+                option5N4D: "5 Ngày / 4 Đêm", option4N3D: "4 Ngày / 3 Đêm", option6N5D: "6 Ngày / 5 Đêm", option7N6D: "7 Ngày / 6 Đêm",
+                labelNumDays: "Số Ngày:", labelNumNights: "Số Đêm:",
+                thService: "Dịch Vụ", thUnit: "Đơn vị tính", thQty: "SL Nhập", thTotal: "Thành Tiền (Yên)",
+                thExtraService: "Dịch Vụ", thExtraUnit: "Đơn vị tính", thExtraQty: "SL Nhập", thExtraTotal: "Thành Tiền (Yên)",
+                guideGroupHeader: "HƯỚNG DẪN VIÊN (Tour Guide)", optionGuideNo: "Không dùng", optionGuideYes: "Có dùng",
+                hotelGroupHeader: "LƯU TRÚ (Hotel)", optionHotel3: "3 Sao", optionHotel4: "4 Sao", optionHotelNone: "Không dùng",
+                mealGroupHeader: "BỮA ĂN (Meal)", optionMealNo: "Không", optionMealYes: "Có",
+                carDayHeader: "XE DI CHUYỂN THEO NGÀY (Car Day)",
+                carAirportOptionLabel: "ĐÓN/TIỄN SÂN BAY (Airport Transfer)", optionAirportNo: "Không dùng", optionAirportYes: "Có dùng",
+                finalTotalLabel: "TỔNG CỘNG CUỐI CÙNG (Yên):",
+                perPersonLabel: "Chi Phí/Người (Yên):",
+                exchangeRateLabel: "Quy đổi Tiền tệ (Đại lý nhập Tỷ giá):",
+                optionVND: "VND", optionUSD: "USD",
+                finalConvertedLabelVND: "TỔNG CỘNG CUỐI CÙNG (VND):",
+                finalConvertedLabelUSD: "TỔNG CỘNG CUỐI CÙNG (USD):",
+                btnToggleExtra: "➕ Thêm Dịch vụ Tùy chọn (Optional)",
+                section1Title: "I. Thông Tin Chung", section2Title: "II. Dịch Vụ Cố Định Cơ Bản", section3Title: "III. Dịch Vụ Tùy Chọn (Extra)", section4Title: "IV. TỔNG KẾT BÁO GIÁ", section5Title: "V. Gửi Báo Giá Email",
+                emailNote: "Nhập email người nhận và nhấn nút để **Mở ứng dụng email và Tạo bản nháp**: (Phiên bản rút gọn)",
+                priceStatusDefault: "Đang sử dụng giá mặc định.",
+                priceStatusLoading: "Đang tải giá mới nhất...", /* không dùng nữa */
+                priceStatusSuccess: "✅ Đang sử dụng giá mặc định.",
+                priceStatusError: "⚠️ Không tải được giá mới. Đang sử dụng giá mặc định.",
+                btnReloadPrices: "🔄 Tải lại Giá"
+            },
+            en: {
+                titleText: "Tour Price Calculator (V22 - Logic Reset/Fetch)",
+                mainTitle: "JAPAN TOUR QUICK PRICE CALCULATOR",
+                sloganText: "Prices are loaded directly from AsahiVietLife's internal data and Japanese service partners. Agents only need to input data in the yellow fields.",
+                noteText: "*Note: Tickets for Disneyland/Universal/Manual Input costs need to be manually entered in the orange Total Price field.",
+                labelNumPeople: "Number of Guests:", labelTourType: "Tour Type:",
+                optionPrivate: "Private Tour (Manual input or select a Tour)",
+                option5N4D: "5 Days / 4 Nights", option4N3D: "4 Days / 3 Nights", option6N5D: "6 Days / 5 Nights", option7N6D: "7 Days / 6 Nights",
+                labelNumDays: "Number of Days:", labelNumNights: "Number of Nights:",
+                thService: "Service", thUnit: "Unit", thQty: "Qty Input", thTotal: "Total (JPY)",
+                thExtraService: "Service", thExtraUnit: "Unit", thExtraQty: "Qty Input", thExtraTotal: "Total (JPY)",
+                guideGroupHeader: "TOUR GUIDE", optionGuideNo: "Not used", optionGuideYes: "Used",
+                hotelGroupHeader: "ACCOMMODATION (Hotel)", optionHotel3: "3 Star", optionHotel4: "4 Star", optionHotelNone: "Not used",
+                mealGroupHeader: "MEAL", optionMealNo: "No", optionMealYes: "Yes",
+                carDayHeader: "DAILY CAR RENTAL (Car Day)",
+                carAirportOptionLabel: "AIRPORT TRANSFER", optionAirportNo: "Not used", optionAirportYes: "Used",
+                finalTotalLabel: "GRAND TOTAL (JPY):",
+                perPersonLabel: "Cost Per Person (JPY):",
+                exchangeRateLabel: "Currency Conversion (Agent enters Exchange Rate):",
+                optionVND: "VND", optionUSD: "USD",
+                finalConvertedLabelVND: "GRAND TOTAL (VND):",
+                finalConvertedLabelUSD: "GRAND TOTAL (USD):",
+                btnToggleExtra: "➕ Add Optional Services (Extra)",
+                section1Title: "I. General Information", section2Title: "II. Basic Fixed Services", section3Title: "III. Optional Services (Extra)", section4Title: "IV. PRICE SUMMARY", section5Title: "V. Send Quotation Email",
+                emailNote: "Enter recipient email and press the button to **Open email app and Create draft**: (Simplified version)",
+                priceStatusDefault: "Using default prices.",
+                priceStatusLoading: "Loading latest prices...", /* no longer used */
+                priceStatusSuccess: "✅ Using default prices.",
+                priceStatusError: "⚠️ Failed to load new prices. Using default prices.",
+                btnReloadPrices: "🔄 Reload Prices"
+            }
+        };
+
+        const calculator = {
+            init: function() {
+                this.setupEventListeners();
+                this.renderExtraServices();
+                this.fetchAndRecalculate(); // giờ chỉ tính lại, không fetch
+            },
+
+            setupEventListeners: function() {
+                const inputs = document.querySelectorAll('.input-qty, .input-select');
+                inputs.forEach(input => {
+                    input.addEventListener('change', () => this.handleInputChange(input.id));
+                    input.addEventListener('keyup', () => this.handleInputChange(input.id));
+                });
+            },
+
+            handleInputChange: function(id) {
+                switch (id) {
+                    case 'tourType': this.updateDaysAndNights(); break;
+                    case 'numPeople':
+                    case 'numDays':
+                    case 'numNights':
+                        if (document.getElementById('tourType').value === 'private') { this.updateDaysAndNights(true); }
+                        break;
+                    case 'guideOption': this.toggleGuideServices(); break;
+                    case 'hotelTypeSelect': this.calculateTotals(); break;
+                    case 'mealOption': this.toggleMealServices(); break;
+                    case 'carAirportOption': this.toggleAirportCarServices(); break;
+                    case 'conversionCurrency':
+                    case 'exchangeRate': this.updateConversionTotal(); break;
+                }
+                this.calculateTotals();
+            },
+
+            updateDaysAndNights: function(isPrivate = false) {
+                const tourType = document.getElementById('tourType').value;
+                const numDaysInput = document.getElementById('numDays');
+                const numNightsInput = document.getElementById('numNights');
+                if (tourType !== 'private') {
+                    const parts = tourType.match(/(\d+)N(\d+)D/);
+                    if (parts) {
+                        const nights = parseInt(parts[1]); const days = parseInt(parts[2]);
+                        numDaysInput.value = days; numNightsInput.value = nights;
+                    }
+                }
+                this.calculateTotals();
+            },
+
+            toggleGuideServices: function() {
+                const guideOption = document.getElementById('guideOption').value;
+                const guideRow = document.querySelector(`[data-service-id="Guide"]`);
+                const qtyInput = document.getElementById('qty-Guide');
+                const numDays = parseInt(document.getElementById('numDays').value) || 0;
+                if (guideOption === 'Yes') { guideRow.classList.remove('hidden-row'); qtyInput.value = numDays; }
+                else { guideRow.classList.add('hidden-row'); qtyInput.value = 0; }
+            },
+
+            toggleMealServices: function() {
+                const mealOption = document.getElementById('mealOption').value;
+                const mealRows = document.querySelectorAll('.meal-row');
+                const numPeople = parseInt(document.getElementById('numPeople').value) || 0;
+                const numDays = parseInt(document.getElementById('numDays').value) || 0;
+                const numNights = parseInt(document.getElementById('numNights').value) || 0;
+                mealRows.forEach(row => {
+                    const serviceId = row.getAttribute('data-service-id');
+                    const qtyInput = document.getElementById(`qty-${serviceId}`);
+                    if (mealOption === 'Yes') {
+                        row.classList.remove('hidden-row');
+                        if (serviceId === 'Breakfast') qtyInput.value = numPeople * numNights;
+                        else if (serviceId === 'Lunch' || serviceId === 'Dinner') qtyInput.value = numPeople * (numDays - 1);
+                    } else { row.classList.add('hidden-row'); qtyInput.value = 0; }
+                });
+            },
+
+            toggleAirportCarServices: function() {
+                const carAirportOption = document.getElementById('carAirportOption').value;
+                const carAirportRows = document.querySelectorAll('.car-row-airport');
+                carAirportRows.forEach(row => {
+                    const qtyInput = row.querySelector('.input-qty');
+                    if (carAirportOption === 'Yes') { row.classList.remove('hidden-row'); if (parseInt(qtyInput.value) === 0) qtyInput.value = 2; }
+                    else { row.classList.add('hidden-row'); qtyInput.value = 0; }
+                });
+            },
+
+            toggleExtraServices: function() {
+                CONFIG.EXTRA_SECTION_VISIBLE = !CONFIG.EXTRA_SECTION_VISIBLE;
+                const extraSection = document.getElementById('extraSection');
+                const btnToggle = document.getElementById('btnToggleExtra');
+                if (CONFIG.EXTRA_SECTION_VISIBLE) { extraSection.classList.remove('hidden-row'); btnToggle.innerHTML = "➖ Ẩn Dịch vụ Tùy chọn (Optional)"; }
+                else { extraSection.classList.add('hidden-row'); btnToggle.innerHTML = "➕ Thêm Dịch vụ Tùy chọn (Optional)"; }
+            },
+
+            /* ===== ĐÃ LOẠI BỎ FETCH: thay bằng resetPrices() ===== */
+            resetPrices: function() {
+                CONFIG.PRICES = { ...DEFAULT_PRICES };
+                const statusDiv = document.getElementById('priceStatus');
+                const statusMsg = document.getElementById('priceStatusMessage');
+                statusDiv.classList.remove('status-error');
+                statusDiv.classList.add('status-success');
+                statusMsg.textContent = this.translate('priceStatusSuccess'); // "✅ Đang sử dụng giá mặc định."
+                this.calculateTotals();
+                this.updateUI();
+            },
+
+            fetchAndRecalculate: async function() {
+                /* Không còn gọi mạng; chỉ tính lại và cập nhật UI */
+                this.calculateTotals();
+                this.updateUI();
+            },
+
+            calculateTotals: function() {
+                let grandTotalJPY = 0;
+                const numPeople = parseInt(document.getElementById('numPeople').value) || 0;
+                const numDays = parseInt(document.getElementById('numDays').value) || 0;
+                const numNights = parseInt(document.getElementById('numNights').value) || 0;
+                const hotelType = document.getElementById('hotelTypeSelect').value;
+                this.toggleGuideServices();
+                this.toggleMealServices();
+
+                CONFIG.SERVICES_DATA.forEach(service => {
+                    let qty = 0;
+                    let pricePerUnit = CONFIG.PRICES[service.id] || 0;
+                    let total = 0;
+
+                    if (service.isFixed) {
+                        switch (service.id) {
+                            case 'ServiceFee': qty = numPeople * numDays; total = qty * pricePerUnit; break;
+                            case 'Guide': qty = parseInt(document.getElementById('qty-Guide').value) || 0; total = qty * pricePerUnit; break;
+                            case 'Hotel_Calc':
+                                if (hotelType !== 'None') { qty = numPeople * numNights; pricePerUnit = CONFIG.PRICES[hotelType] || 0; total = qty * pricePerUnit; }
+                                break;
+                            case 'Breakfast':
+                            case 'Lunch':
+                            case 'Dinner':
+                                qty = parseInt(document.getElementById(`qty-${service.id}`).value) || 0; total = qty * pricePerUnit; break;
+                            default:
+                                if (service.id.includes('Car')) { qty = parseInt(document.getElementById(`qty-${service.id}`).value) || 0; total = qty * pricePerUnit; }
+                                break;
+                        }
+                    } else if (service.isExtra) {
+                        if (service.isManualInput) {
+                            const manualInput = document.getElementById(`qty-${service.id}`);
+                            total = parseFloat(manualInput.value) || 0;
+                            qty = 1;
+                            manualInput.classList.add('manual-total');
+                        } else {
+                            qty = parseInt(document.getElementById(`qty-${service.id}`).value) || 0;
+                            total = qty * pricePerUnit;
+                        }
+                    }
+
+                    service.calculatedQty = qty;
+                    service.calculatedTotal = total;
+                    grandTotalJPY += total;
+                });
+
+                this.state = {
+                    grandTotalJPY, numPeople, numDays, numNights,
+                    exchangeRate: parseFloat(document.getElementById('exchangeRate').value) || 0,
+                    conversionCurrency: document.getElementById('conversionCurrency').value
+                };
+                this.updateConversionTotal();
+                this.updateUI();
+            },
+
+            updateConversionTotal: function() {
+                const state = this.state;
+                const convertedRow = document.getElementById('convertedRow');
+                const convertedCurrencySymbol = document.getElementById('convertedCurrencySymbol');
+                const finalConvertedLabel = document.getElementById('finalConvertedLabel');
+
+                state.exchangeRate = parseFloat(document.getElementById('exchangeRate').value) || 0;
+                state.conversionCurrency = document.getElementById('conversionCurrency').value;
+
+                let convertedTotal = 0, currencyLabel = '', currencyClass = '';
+                if (state.conversionCurrency === 'VND') {
+                    convertedTotal = state.grandTotalJPY * state.exchangeRate;
+                    currencyLabel = this.translate('finalConvertedLabelVND'); currencyClass = 'converted-total-vnd';
+                } else if (state.conversionCurrency === 'USD') {
+                    convertedTotal = state.grandTotalJPY / state.exchangeRate;
+                    currencyLabel = this.translate('finalConvertedLabelUSD'); currencyClass = 'converted-total-usd';
+                } else { currencyLabel = "TỔNG CỘNG CUỐI CÙNG"; currencyClass = ''; }
+
+                document.getElementById('finalConvertedTotal').textContent = this.formatNumber(convertedTotal, state.conversionCurrency);
+                convertedCurrencySymbol.textContent = state.conversionCurrency;
+                finalConvertedLabel.textContent = currencyLabel;
+                convertedRow.className = currencyClass;
+            },
+
+            translate: function(key) { return TRANSLATIONS[CONFIG.LANGUAGE][key] || key; },
+
+            setLanguage: function(lang) { CONFIG.LANGUAGE = lang; this.updateText(); this.calculateTotals(); },
+
+            updateText: function() {
+                for (const key in TRANSLATIONS[CONFIG.LANGUAGE]) {
+                    const element = document.getElementById(key);
+                    if (element) element.textContent = this.translate(key);
+                }
+                document.getElementById('finalConvertedLabel').textContent =
+                    (this.state?.conversionCurrency === 'VND') ? this.translate('finalConvertedLabelVND') : this.translate('finalConvertedLabelUSD');
+                document.getElementById('btnToggleExtra').innerHTML = this.translate('btnToggleExtra');
+                document.getElementById('btnReloadPrices').innerHTML = this.translate('btnReloadPrices');
+
+                CONFIG.SERVICES_DATA.forEach(service => {
+                    const nameElement = document.getElementById(`serviceName-${service.id}`);
+                    const unitElement = document.getElementById(`unit-${service.id}`);
+                    if (nameElement) nameElement.textContent = service[`name_${CONFIG.LANGUAGE}`] || service.id;
+                    if (unitElement) unitElement.textContent = service[`unit_${CONFIG.LANGUAGE}`] || service.unit_vi;
+                });
+            },
+
+            formatNumber: function(number, currency = 'JPY') {
+                let options = { minimumFractionDigits: 0, maximumFractionDigits: 0 };
+                let locale = 'vi-VN';
+                if (currency === 'USD') { options.minimumFractionDigits = 2; options.maximumFractionDigits = 2; locale = 'en-US'; }
+                return new Intl.NumberFormat(locale, options).format(Math.round(number));
+            },
+
+            updateUI: function() {
+                const state = this.state; const numPeople = state.numPeople;
+                document.getElementById('qtyDisplay-ServiceFee').textContent = `${numPeople} ${this.translate('labelNumPeople')} x ${state.numDays} ${this.translate('labelNumDays')}`;
+                document.getElementById('hotelNightDisplay').textContent = `${state.numNights} ${this.translate('labelNumNights')} x ${numPeople} ${this.translate('labelNumPeople')}`;
+
+                CONFIG.SERVICES_DATA.forEach(service => {
+                    const totalElement = document.getElementById(`total-${service.id}`);
+                    if (totalElement) totalElement.textContent = this.formatNumber(service.calculatedTotal);
+                    if (service.isQuantityInput && !service.isManualInput) {
+                        const qtyInput = document.getElementById(`qty-${service.id}`);
+                        if (qtyInput) qtyInput.value = service.calculatedQty;
+                    }
+                });
+
+                document.getElementById('grandTotal').textContent = this.formatNumber(state.grandTotalJPY);
+                const perPerson = numPeople > 0 ? state.grandTotalJPY / numPeople : 0;
+                document.getElementById('perPersonTotal').textContent = this.formatNumber(perPerson);
+                document.getElementById('convertedCurrencySymbol').textContent = state.conversionCurrency;
+                this.updateText();
+            },
+
+            renderExtraServices: function() {
+                const extraServicesTbody = document.getElementById('extraServices');
+                extraServicesTbody.innerHTML = '';
+                CONFIG.SERVICES_DATA.filter(s => s.isExtra).forEach(service => {
+                    const row = document.createElement('tr');
+                    row.classList.add('service-row', 'extra-row');
+                    row.dataset.serviceId = service.id;
+                    const isManual = service.isManualInput;
+                    const name = service[`name_${CONFIG.LANGUAGE}`];
+                    const unit = service[`unit_${CONFIG.LANGUAGE}`];
+                    row.innerHTML += `<td id="serviceName-${service.id}">${name}</td>`;
+                    row.innerHTML += `<td><span id="unit-${service.id}">${unit}</span></td>`;
+                    if (!isManual) row.innerHTML += `<td><input type="number" id="qty-${service.id}" value="0" min="0" class="input-qty"></td>`;
+                    else row.innerHTML += `<td><span style="font-style: italic;">(Nhập Giá)</span></td>`;
+                    if (isManual) row.innerHTML += `<td><input type="number" id="qty-${service.id}" value="0" min="0" class="input-qty manual-total"></td>`;
+                    else row.innerHTML += `<td><span id="total-${service.id}" class="total-price">0</span></td>`;
+                    extraServicesTbody.appendChild(row);
+                });
+                this.setupEventListeners();
+            },
+
+            generateMailtoLink: function() {
+                const recipientEmail = document.getElementById('recipientEmail').value;
+                const grandTotal = document.getElementById('grandTotal').textContent;
+                const convertedTotal = document.getElementById('finalConvertedTotal').textContent;
+                const convertedCurrency = document.getElementById('convertedCurrencySymbol').textContent;
+                const exchangeRate = document.getElementById('exchangeRate').value;
+                const numPeople = document.getElementById('numPeople').value;
+
+                let emailBody = `Chào Quý Đại lý/Khách hàng, \n\nDưới đây là báo giá sơ bộ cho Tour Nhật Bản theo yêu cầu:\n\n`;
+                emailBody += `Số lượng Khách: ${numPeople} người.\n`;
+                let details = '';
+                CONFIG.SERVICES_DATA.filter(s => s.calculatedTotal > 0 || s.isManualInput).forEach(service => {
+                    const name = service[`name_${CONFIG.LANGUAGE}`] || service.id;
+                    const unit = service[`unit_${CONFIG.LANGUAGE}`] || service.unit_vi;
+                    const total = this.formatNumber(service.calculatedTotal);
+                    const qty = service.calculatedQty;
+                    if (service.isManualInput) details += `\t- ${name}: ${total} Yên (Tự nhập)\n`;
+                    else details += `\t- ${name}: ${qty} ${unit} = ${total} Yên\n`;
+                });
+                emailBody += `\n**CHI TIẾT DỊCH VỤ (Yên):**\n${details}`;
+                emailBody += `\n\n================================\n`;
+                emailBody += `TỔNG CỘNG CUỐI CÙNG (Yên): ${grandTotal} Yên\n`;
+                emailBody += `Tỷ giá: 1 Yên = ${exchangeRate} ${convertedCurrency}\n`;
+                emailBody += `TỔNG CỘNG CUỐI CÙNG (${convertedCurrency}): ${convertedTotal} ${convertedCurrency}\n`;
+                emailBody += `================================\n\n`;
+                emailBody += `Vui lòng liên hệ để có báo giá chính thức và chi tiết nhất.\n\nTrân trọng,\nAsahi VietLife`;
+
+                const subject = encodeURIComponent(`Báo giá Tour Nhật Bản - ${numPeople} Khách`);
+                const body = encodeURIComponent(emailBody);
+                const mailtoLink = `mailto:${recipientEmail}?subject=${subject}&body=${body}`;
+                window.open(mailtoLink, '_self');
+            }
+        };
+    </script>
 </body>
 </html>
